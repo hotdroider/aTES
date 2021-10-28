@@ -135,3 +135,8 @@ Account.DayCompleted | Accounting | Notification
 
 
 ### Выписать все CUD события и какие данные нужны для этих событий, которые необходимы для работы системы
+
+Событие | Продюсер | Консумер
+------------ | ------------- | -----------
+CUD for Account | Auth | Task, Accounting
+CUD for Task | Task |  Accounting
