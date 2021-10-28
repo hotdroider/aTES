@@ -122,4 +122,16 @@ Service - Domain схема + служебный нотификатор о со�
 
 ### Определить все бизнес события, необходимые для работы системы
 
+Событие | Продюсер | Консумер
+------------ | ------------- | -----------
+Account.Logined | Auth | Task, Accounting, Analytics
+Day.Completed | Notification |  Accounting
+Task.Created | Task | Accounting
+Task.Assigned | Task | Accounting
+Task.Completed | Task | Accounting
+Account.Debeted | Accounting | Analytics
+Account.Credited | Accounting | Analytics
+Account.DayCompleted | Accounting | Notification
+
+
 ### Выписать все CUD события и какие данные нужны для этих событий, которые необходимы для работы системы
