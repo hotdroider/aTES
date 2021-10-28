@@ -103,7 +103,7 @@ Event: ???
 
 ### Построить модель данных для системы и модель доменов.
 
-![Data Model](https://github.com/hotdroider/aTES/blob/main/aTES%20data.svg)
+![Data Model](https://github.com/hotdroider/aTES/blob/main/aTES%20data.drawio.svg)
 
 ### Определить, какие общие данные нужны для разных доменов и как связаны данные между разными доменами.
 
