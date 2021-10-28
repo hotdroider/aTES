@@ -74,7 +74,7 @@ Event: ??? no
 После выплаты баланса (в конце дня) он должен обнуляться, и в аудитлоге всех операций аккаунтинга должно быть отображено, что была выплачена сумма
 
 Actor: Account.DayCompleted\
-Command: Send mail\
+Command: Reset balance, Add total bill\
 Data: Total day balance\
 Event: ??? no
 
