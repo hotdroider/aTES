@@ -4,10 +4,10 @@
 
 Авторизация в дешборде X должна выполняться через общий сервис аутентификации UberPopug Inc.
 
-Actor: Account
-Command: Login
-Data: User Claims ???
-Event: Account.Logined
+Actor: Account\
+Command: Login\
+Data: User Claims ???\
+Event: Account.Logined\
 
 Конец дня
 
