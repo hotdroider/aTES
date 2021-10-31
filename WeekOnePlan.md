@@ -1,7 +1,7 @@
 ### Разобрать каждое требование на составляющие (актор, команда, событие, query). Определить, как все бизнес цепочки будут выглядеть и на какие шаги они будут разбиваться.
 
 Набросок в Miro
-[Miro](https://miro.com/app/board/o9J_lmy13sg=/)
+[Event storming attempt](https://miro.com/app/board/o9J_lmy13sg=/)
 
 #### Common
 
