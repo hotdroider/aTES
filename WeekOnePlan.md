@@ -1,5 +1,8 @@
 ### Разобрать каждое требование на составляющие (актор, команда, событие, query). Определить, как все бизнес цепочки будут выглядеть и на какие шаги они будут разбиваться.
 
+Набросок в Miro
+[Miro](https://miro.com/app/board/o9J_lmy13sg=/)
+
 #### Common
 
 Авторизация в дешборде X должна выполняться через общий сервис аутентификации UberPopug Inc.
@@ -18,8 +21,8 @@ Event: Day.Completed
 
 #### Task Tracker
 
-У каждого из сотрудников должен быть свой счёт, который показывает, сколько за сегодня он получил денег. 
-У счёта должен быть аудитлог того, за что были списаны или начислены деньги, с подробным описанием каждой из задач.
+Новые таски может создавать кто угодно (администратор, начальник, разработчик, менеджер и любая другая роль). 
+У задачи должны быть описание, статус (выполнена или нет) и попуг, на которого заассайнена задача.
 
 Actor: Account\
 Command: Create Task\
@@ -32,7 +35,7 @@ Event: Task.Created
 Actor: Account (Admin, Manager)\
 Command: Reassign Tasks\
 Data: Task, PublicAccountID\
-Event: Task.Assigned
+Event: Task.Reassigned
 
 Каждый сотрудник должен иметь возможность отметить задачу выполненной.
 
@@ -60,21 +63,21 @@ Event: Account.Credited
 В конце дня необходимо считать сколько денег сотрудник получил за рабочий день
     
 Actor: Day.Completed\
-Command: Calculate total balance\
+Command: Calculate balance\
 Data: Total day balance\
-Event: Account.DayCompleted
+Event: Balance.calculated
 
 В конце дня необходимо отправлять на почту сумму выплаты
 
-Actor: Account.DayCompleted\
+Actor: Balance.calculated\
 Command: Send mail\
 Data: Total day balance\
 Event: ??? no
 
 После выплаты баланса (в конце дня) он должен обнуляться, и в аудитлоге всех операций аккаунтинга должно быть отображено, что была выплачена сумма
 
-Actor: Account.DayCompleted\
-Command: Reset balance, Add total bill\
+Actor: Balance.calculated\
+Command: Roll balance\
 Data: Total day balance\
 Event: ??? no
 
@@ -83,7 +86,7 @@ Event: ??? no
 Нужно указывать, сколько заработал топ-менеджмент за сегодня
 
 Actor: Account.Debeted, Account.Credited\
-Command: Calculate balance\
+Command: Calculate analytics balance\
 Data: Managers balance\
 Event: ???
 
