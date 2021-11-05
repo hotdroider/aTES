@@ -1,0 +1,14 @@
+﻿
+@page "/tasks/{id}"
+
+@inject TaskService TaskService 
+
+
+<h3>Task</h3>
+
+@code {
+
+    [Parameter] public int? id { get; set; }
+
+
+}
