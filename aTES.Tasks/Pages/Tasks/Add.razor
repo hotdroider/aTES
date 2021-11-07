@@ -1,0 +1,60 @@
+﻿@page "/tasks/add"
+
+@inject NavigationManager NavigationManager
+@inject TaskService TaskService
+@inject IAlertService AlertService
+
+<h3>New Task</h3>
+
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-row">
+        <div class="form-group col">
+            <label>Name</label>
+            <InputText @bind-Value="model.Name" class="form-control" />
+            <ValidationMessage For="@(() => model.Name)" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col">
+            <label>Description</label>
+            <InputTextArea @bind-Value="model.Description" class="form-control h-50" />
+            <ValidationMessage For="@(() => model.Description)" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <button disabled="@loading" class="btn btn-primary">
+            @if (loading)
+            {
+                <span class="spinner-border spinner-border-sm mr-1"></span>
+            }
+            Save
+        </button>
+        <NavLink href="tasks" class="btn btn-link">Cancel</NavLink>
+    </div>
+</EditForm>
+
+@code {
+    private AddTask model = new AddTask();
+    private bool loading;
+
+    private async void OnValidSubmit()
+    {
+        loading = true;
+        try
+        {
+            await TaskService.CreateAsync(model);
+            AlertService.Success("Task created successfully", keepAfterRouteChange: true);
+            NavigationManager.NavigateTo("tasks");
+        }
+        catch (Exception ex)
+        {
+            AlertService.Error(ex.Message);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

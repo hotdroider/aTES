@@ -1,0 +1,9 @@
+﻿@page "/"
+
+<h1>aTES Task service</h1>
+
+Welcome,
+<AuthorizeView>
+    <Authorized>@context.User.Identity.Name</Authorized>
+    <NotAuthorized>mr. popug, please sign in</NotAuthorized>
+</AuthorizeView>

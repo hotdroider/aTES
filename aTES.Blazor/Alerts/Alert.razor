@@ -1,0 +1,107 @@
+﻿@implements IDisposable
+@inject IAlertService AlertService
+@inject NavigationManager NavigationManager
+
+@using Microsoft.AspNetCore.Components.Routing
+
+@foreach (var alert in alerts)
+{
+    <div class="@CssClass(alert)">
+        <a class="close" @onclick="@(() => RemoveAlert(alert))">&times;</a>
+        <span>@alert.Message</span>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = "default-alert";
+
+    [Parameter]
+    public bool Fade { get; set; } = true;
+
+    private List<AlertItem> alerts = new List<AlertItem>();
+
+    protected override void OnInitialized()
+    {
+        AlertService.OnAlert += OnAlert;
+        NavigationManager.LocationChanged += OnLocationChange;
+    }
+
+    public void Dispose()
+    {
+        AlertService.OnAlert -= OnAlert;
+        NavigationManager.LocationChanged -= OnLocationChange;
+    }
+
+    private async void OnAlert(AlertItem alert)
+    {
+        if (alert.Id != Id)
+            return;
+
+        if (alert.Message == null)
+        {
+            alerts.RemoveAll(x => !x.KeepAfterRouteChange);
+
+            // set the 'KeepAfterRouteChange' flag to false for the
+            // remaining alerts so they are removed on the next clear
+            alerts.ForEach(x => x.KeepAfterRouteChange = false);
+        }
+        else
+        {
+            alerts.Add(alert);
+            StateHasChanged();
+
+            if (alert.AutoClose)
+            {
+                await Task.Delay(3000);
+                RemoveAlert(alert);
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnLocationChange(object sender, LocationChangedEventArgs e)
+    {
+        AlertService.Clear(Id);
+    }
+
+    private async void RemoveAlert(AlertItem alert)
+    {
+        if (!alerts.Contains(alert)) return;
+
+        if (Fade)
+        {
+            alert.Fade = true;
+            await Task.Delay(250);
+            alerts.Remove(alert);
+        }
+        else
+        {
+            // remove alert
+            alerts.Remove(alert);
+        }
+
+        StateHasChanged();
+    }
+
+    private string CssClass(AlertItem alert)
+    {
+        if (alert == null) return null;
+
+        var classes = new List<string> { "alert", "alert-dismissable", "mt-4", "container" };
+
+        var alertTypeClass = new Dictionary<AlertType, string>();
+        alertTypeClass[AlertType.Success] = "alert-success";
+        alertTypeClass[AlertType.Error] = "alert-danger";
+        alertTypeClass[AlertType.Info] = "alert-info";
+        alertTypeClass[AlertType.Warning] = "alert-warning";
+
+        classes.Add(alertTypeClass[alert.Type]);
+
+        if (alert.Fade)
+            classes.Add("fade");
+
+        return string.Join(' ', classes);
+    }
+}

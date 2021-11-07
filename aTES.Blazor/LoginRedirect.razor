@@ -1,0 +1,27 @@
+﻿@inject NavigationManager UriHelper
+@code {
+
+    [Parameter] public string LoginURI { get; set; } = "account/login";
+
+    protected override void OnInitialized()
+    {
+
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        var queryString = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("ReturnUrl", UriHelper.Uri);
+
+        //return after login
+        try
+        {
+            UriHelper.NavigateTo(LoginURI + "?" + queryString.ToString());
+
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+}
