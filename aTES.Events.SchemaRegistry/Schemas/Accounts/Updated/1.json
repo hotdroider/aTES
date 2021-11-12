@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "title": "Accounts.Updated.v1",
+  "description": "JSON Schema for Account CUD (version 1)",
+
+  "definitions": {
+
+    "event_data": {
+
+      "type": "object",
+
+      "properties": {
+        "Name": { "type": "string" },
+        "PublicKey": { "type": "string" },
+        "Email": { "type": "string" },
+        "Role": { "type": "string" }
+      },
+
+      "required": [ "Name", "PublicKey", "Email", "Role" ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "Id": { "type": "string" },
+    "Name": { "type": "string" },
+    "Producer": { "type": "string" },
+    "Version": { "type": "number" },
+    "Time": { "type": "string" },
+
+    "Data": {
+      "$ref": "#/definitions/event_data"
+    }
+  },
+
+  "required": [ "Id", "Name", "Version", "Time" ]
+}

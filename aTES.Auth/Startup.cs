@@ -3,6 +3,7 @@ using aTES.Auth.Services;
 using aTES.Blazor;
 using aTES.Common;
 using aTES.Common.Kafka;
+using aTES.Events.SchemaRegistry;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -79,6 +80,8 @@ namespace aTES.Auth
                 .AddDeveloperSigningCredential();
 
             services.AddPopugBlazor();
+
+            services.AddPopugEventSchemas(Configuration);
 
             services.AddSingleton<IProducer>(s =>
             {

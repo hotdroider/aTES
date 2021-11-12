@@ -7,6 +7,7 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using aTES.Common;
 
 namespace aTES.Tasks.Services
 {
@@ -18,11 +19,14 @@ namespace aTES.Tasks.Services
         private readonly IServiceScopeFactory _scopeFactory;
 
         private readonly IConsumer _accountConsumer;
+        private readonly IProducer _producer;
 
-        public AccountsUpdater(IServiceScopeFactory scopeFactory, IConsumerFactory consumerFactory)
+        public AccountsUpdater(IServiceScopeFactory scopeFactory, 
+            IConsumerFactory consumerFactory,
+            IProducer producer)
         {
             _scopeFactory = scopeFactory;
-
+            _producer = producer;
             _accountConsumer = consumerFactory.CreateConsumer("aTES.Tasks.AccountUpdater", "Accounts-stream");
         }
 
@@ -32,10 +36,12 @@ namespace aTES.Tasks.Services
             var db = scope.ServiceProvider.GetRequiredService<TasksDbContext>();
             while (!stoppingToken.IsCancellationRequested)
             {
+                string eventBody = null;
                 try
                 {
                     var msgRaw = await _accountConsumer.ConsumeAsync();
-                    var accMsg = JsonSerializer.Deserialize<AccMessage>(msgRaw.Value);
+                    eventBody = msgRaw.Value;
+                    var accMsg = JsonSerializer.Deserialize<Event<AccountData>>(eventBody);
 
                     await ProcessMessage(accMsg, db);
 
@@ -43,48 +49,87 @@ namespace aTES.Tasks.Services
                 }
                 catch (Exception ex)
                 {
-                    //TODO 
+                    await TryReproduceToDLQ(eventBody);
                 }
             }
         }
 
-        private async Task ProcessMessage(AccMessage accMsg, TasksDbContext db)
+        private async Task TryReproduceToDLQ(string messageBody)
         {
-            //message body is full here, just insert or update
-            var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accMsg.Account.PublicKey);
+            try
+            {
+                await _producer.ProduceAsync(messageBody, "Accounts-Dead-Letter-Queue");
+            }
+            catch(Exception ex)
+            {
+                //log, panic, save to db...
+            }
+        }
+
+        private async Task ProcessMessage(Event<AccountData> accMsg, TasksDbContext db)
+        {
+            switch (accMsg.Name, accMsg.Version)
+            {
+                case ("Accounts.Created", 1):
+                case ("Accounts.Updated", 1):
+                    await CreateOrUpdateAccount(accMsg.Data, db);
+                    break;
+                case ("Accounts.Deleted", 1):
+                    await DeleteAccount(accMsg.Data, db);
+                    break;
+                default:
+                    throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
+            };           
+        }
+
+        private async Task CreateOrUpdateAccount(AccountData accEvent, TasksDbContext db)
+        {
+            var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
             if (account == null)
             {
-                account = new Account();
+                account = new Account()
+                {
+                    PublicKey = accEvent.PublicKey,
+                    IsDeleted = false
+                };
                 await db.Accounts.AddAsync(account);
             }
 
-            account.Name = accMsg.Account.Name;
-            account.Email = accMsg.Account.Email;
-            account.PublicKey = accMsg.Account.PublicKey;
-            account.Role = accMsg.Account.Role;
-            account.IsDeleted = accMsg.Account.IsDeleted == true;
+            account.Name = accEvent.Name;
+            account.Email = accEvent.Email;
+            account.Role = accEvent.Role;
+
+            await db.SaveChangesAsync();
+        }
+
+        private async Task DeleteAccount(AccountData accEvent, TasksDbContext db)
+        {
+            var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
+            if (account == null)
+            {
+                account = new Account() 
+                { 
+                    PublicKey = accEvent.PublicKey,
+                };
+                await db.Accounts.AddAsync(account);
+            }
+
+            account.IsDeleted = true;
 
             await db.SaveChangesAsync();
         }
     }
+    
+    //need some class to deserialize to
 
-    public class AccMessage
+    public class AccountData
     {
-        public class AccBody
-        {
-            public string Name { get; set; }
+        public string Name { get; set; }
 
-            public string PublicKey { get; set; }
+        public string PublicKey { get; set; }
 
-            public string Email { get; set; }
+        public string Email { get; set; }
 
-            public string Role { get; set; }
-
-            public bool? IsDeleted { get; set; }
-        }
-
-        public string Type { get; set; }
-
-        public AccBody Account { get; set; }
+        public string Role { get; set; }
     }
 }

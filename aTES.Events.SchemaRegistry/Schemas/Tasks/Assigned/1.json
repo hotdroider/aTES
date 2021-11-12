@@ -1,0 +1,37 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "title": "Tasks.Assigned.v1",
+  "description": "JSON Schema for Tasks Assigned business event (version 1)",
+
+  "definitions": {
+
+    "event_data": {
+
+      "type": "object",
+
+      "properties": {
+        "PublicKey": { "type": "string" },
+        "AssigneePublicKey": { "type": "string" }
+      },
+
+      "required": [ "PublicKey", "AssigneePublicKey" ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "Id": { "type": "string" },
+    "Name": { "type": "string" },
+    "Producer": { "type": "string" },
+    "Version": { "type": "number" },
+    "Time": { "type": "string" },
+
+    "Data": {
+      "$ref": "#/definitions/event_data"
+    }
+  },
+
+  "required": [ "Id", "Name", "Version", "Time" ]
+}

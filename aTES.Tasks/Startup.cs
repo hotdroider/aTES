@@ -1,6 +1,7 @@
 using aTES.Blazor;
 using aTES.Common;
 using aTES.Common.Kafka;
+using aTES.Events.SchemaRegistry;
 using aTES.Tasks.Data;
 using aTES.Tasks.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -33,6 +34,8 @@ namespace aTES.Tasks
             services.AddDbContext<TasksDbContext>(config => config.UseSqlServer(connectionString));
 
             services.AddScoped<TaskService>();
+
+            services.AddPopugEventSchemas(Configuration);
 
             var kafkaBrokers = Configuration.GetSection("Kafka:Brokers").Get<string[]>();
             services.AddSingleton<IProducer>(s => new CommonProducer(kafkaBrokers));

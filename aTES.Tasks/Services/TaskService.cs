@@ -1,4 +1,6 @@
-﻿using aTES.Common.Kafka;
+﻿using aTES.Common;
+using aTES.Common.Kafka;
+using aTES.Events.SchemaRegistry;
 using aTES.Tasks.Data;
 using aTES.Tasks.Models;
 using Microsoft.EntityFrameworkCore;
@@ -11,15 +13,21 @@ namespace aTES.Tasks.Services
 {
     public class TaskService
     {
-        public readonly TasksDbContext _tasksDbContext;
+        private readonly TasksDbContext _tasksDbContext;
 
-        public readonly IProducer _producer;
+        private readonly IProducer _producer;
+
+        private readonly SchemaRegistry _schemaRegistry;
+
+        private const string PRODUCER = "aTES.Tasks";
 
         public TaskService(TasksDbContext tasksDbContext,
-            IProducer producer)
+            IProducer producer,
+            SchemaRegistry schemaRegistry)
         {
             _tasksDbContext = tasksDbContext;
             _producer = producer;
+            _schemaRegistry = schemaRegistry;
         }
 
         /// <summary>
@@ -27,6 +35,9 @@ namespace aTES.Tasks.Services
         /// </summary>
         public async Task CreateAsync(AddTask model)
         {
+            if (model.Name.Any(c => c == '[' || c == ']'))
+                throw new ArgumentException("Title should not contains Jira ID");
+
             var newTask = new PopugTask()
             {
                 Name = model.Name,
@@ -41,8 +52,8 @@ namespace aTES.Tasks.Services
             _tasksDbContext.Tasks.Add(newTask);
             await _tasksDbContext.SaveChangesAsync();
 
-            await SendCUDAsync("Created", newTask, "Tasks-stream");
-            await SendBusinessAsync("Assigned", newTask, "Tasks");
+            await SendCUDAsync("Tasks.Created", 2, newTask);
+            await SendTaskStateEventAsync("Tasks.Assigned", 1, newTask);
         }
 
         /// <summary>
@@ -71,10 +82,7 @@ namespace aTES.Tasks.Services
             await _tasksDbContext.SaveChangesAsync();
 
             foreach (var task in openedTasks)
-            {
-                await SendCUDAsync("Updated", task, "Tasks-stream");
-                await SendBusinessAsync("Assigned", task, "Tasks");
-            }
+                await SendTaskStateEventAsync("Tasks.Assigned", 1, task);
         }
 
         /// <summary>
@@ -87,8 +95,7 @@ namespace aTES.Tasks.Services
 
             await _tasksDbContext.SaveChangesAsync();
 
-            await SendCUDAsync("Updated", task, "Tasks-stream");
-            await SendBusinessAsync("Completed", task, "Tasks");
+            await SendTaskStateEventAsync("Tasks.Completed", 1, task);
         }
 
         /// <summary>
@@ -102,7 +109,7 @@ namespace aTES.Tasks.Services
                 .ToListAsync();
 
             if (developerIds.Count == 0)
-                return null;
+                throw new Exception("No developers found");
 
             var roll = new Random(Guid.NewGuid().GetHashCode());
             var idx = roll.Next(0, developerIds.Count - 1);
@@ -113,28 +120,67 @@ namespace aTES.Tasks.Services
         /// <summary>
         /// Send business task event
         /// </summary>
-        private Task SendBusinessAsync(string messageType, PopugTask task, string topic)
+        private Task SendTaskStateEventAsync(string eventType, int version, PopugTask task)
         {
-            return _producer.ProduceAsync(new
+            var evnt = new Event()
             {
-                Type = messageType,
-                At = DateTime.UtcNow,
-                PublicKey = task.PublicKey,
-                AssignedOn = task.AssignedOn
-            }, topic);
+                Name = eventType,
+                Producer = PRODUCER,
+                Version = version
+            };
+
+            evnt.Data = eventType switch
+            {
+                "Tasks.Assigned" => new
+                {
+                    PublicKey = task.PublicKey,
+                    AssigneePublicKey = task.AssignedOn,
+                },
+                "Tasks.Completed" => new
+                {
+                    PublicKey = task.PublicKey,
+                    AssigneePublicKey = task.AssignedOn,
+                },
+                _ => throw new ArgumentException($"Unsupported event type {eventType}")
+            };
+
+            _schemaRegistry.ThrowIfValidationFails(evnt, eventType, version);
+
+            return _producer.ProduceAsync(evnt, "Tasks-state-changes");
         }
 
         /// <summary>
-        /// Send CUD task event
+        /// Build, validate and send CUD event for task
         /// </summary>
-        private Task SendCUDAsync(string messageType, PopugTask task, string topic)
+        private Task SendCUDAsync(string eventType, int version, PopugTask task)
         {
-            return _producer.ProduceAsync(new
+            var evnt = new Event()
             {
-                Type = messageType,
-                At = DateTime.UtcNow,
-                Task = new TaskMsg(task)
-            }, topic);
+                Name = eventType,
+                Producer = PRODUCER,
+                Version = version
+            };
+
+            evnt.Data = eventType switch
+            {
+                "Tasks.Created" => new
+                {
+                    Name = task.Name,
+                    PublicKey = task.PublicKey,
+                    Description = task.Description,
+                },
+                "Tasks.Updated" => new
+                {
+                    Name = task.Name,
+                    PublicKey = task.PublicKey,
+                    Description = task.Description,
+                },
+                _ => throw new ArgumentException($"Unsupported event type {eventType}")
+            };
+
+            _schemaRegistry.ThrowIfValidationFails(evnt, eventType, version);
+
+            return _producer.ProduceAsync(evnt, "Tasks-stream");
         }
     }
 }
