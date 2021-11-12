@@ -19,16 +19,22 @@ namespace aTES.Events.SchemaRegistry
             _schemaRepository = schemaRepository;
         }
 
+        /// <summary>
+        /// Is event correct for some schema
+        /// </summary>
         public bool ValidateEvent(Event validateMe, string eventType, int version)
         {
             var schema = GetSchema(eventType, version);
 
-            var msg = JsonSerializer.Serialize(validateMe);
-            var obj = JObject.Parse(msg);
+            var serializedToJson = JsonSerializer.Serialize(validateMe);
+            var obj = JObject.Parse(serializedToJson);
 
             return obj.IsValid(schema);
         }
 
+        /// <summary>
+        /// Throw an error if event is not correct for some schema
+        /// </summary>
         public void ThrowIfValidationFails(Event validateMe, string eventType, int version)
         {
             var schema = GetSchema(eventType, version);

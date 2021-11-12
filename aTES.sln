@@ -13,7 +13,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Blazor", "aTES.Blazor\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{1117F48B-5246-414A-AAB1-1008BF8409E4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTES.Events.SchemaRegistry", "aTES.Events.SchemaRegistry\aTES.Events.SchemaRegistry.csproj", "{94D941A8-57F0-4B74-8016-68A350D34E83}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Events.SchemaRegistry", "aTES.Events.SchemaRegistry\aTES.Events.SchemaRegistry.csproj", "{94D941A8-57F0-4B74-8016-68A350D34E83}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Accounting", "aTES.Accounting\aTES.Accounting.csproj", "{1B90D23D-9F6E-4589-A167-DD22F2D96185}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Analytics", "aTES.Analytics\aTES.Analytics.csproj", "{ED2375C4-1806-419A-A235-4841E78322CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTES.DayCompletion", "aTES.Jobs.DayCompletion\aTES.DayCompletion.csproj", "{2590569C-879B-4618-A304-E9DE3CE59782}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +47,18 @@ Global
 		{94D941A8-57F0-4B74-8016-68A350D34E83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{94D941A8-57F0-4B74-8016-68A350D34E83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{94D941A8-57F0-4B74-8016-68A350D34E83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

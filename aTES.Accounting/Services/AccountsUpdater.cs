@@ -1,5 +1,5 @@
 ﻿using aTES.Common.Kafka;
-using aTES.Tasks.Data;
+using aTES.Accounting.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using aTES.Common;
 
-namespace aTES.Tasks.Services
+namespace aTES.Accounting.Services
 {
     /// <summary>
     /// Service to listen for Account CUD events
@@ -27,13 +27,13 @@ namespace aTES.Tasks.Services
         {
             _scopeFactory = scopeFactory;
             _producer = producer;
-            _accountConsumer = consumerFactory.CreateConsumer("aTES.Tasks.AccountUpdater", "Accounts-stream");
+            _accountConsumer = consumerFactory.CreateConsumer("aTES.Accounting.AccountUpdater", "Accounts-stream");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<TasksDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
             while (!stoppingToken.IsCancellationRequested)
             {
                 string eventBody = null;
@@ -43,7 +43,18 @@ namespace aTES.Tasks.Services
                     eventBody = msgRaw.Value;
                     var accMsg = JsonSerializer.Deserialize<Event<AccountData>>(eventBody);
 
-                    await ProcessMessage(accMsg, db);
+                    switch (accMsg.Name, accMsg.Version)
+                    {
+                        case ("Accounts.Created", 1):
+                        case ("Accounts.Updated", 1):
+                            await CreateOrUpdateAccount(accMsg.Data, db);
+                            break;
+                        case ("Accounts.Deleted", 1):
+                            await DeleteAccount(accMsg.Data, db);
+                            break;
+                        default:
+                            throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
+                    };
 
                     msgRaw.Commit();
                 }
@@ -66,23 +77,7 @@ namespace aTES.Tasks.Services
             }
         }
 
-        private async Task ProcessMessage(Event<AccountData> accMsg, TasksDbContext db)
-        {
-            switch (accMsg.Name, accMsg.Version)
-            {
-                case ("Accounts.Created", 1):
-                case ("Accounts.Updated", 1):
-                    await CreateOrUpdateAccount(accMsg.Data, db);
-                    break;
-                case ("Accounts.Deleted", 1):
-                    await DeleteAccount(accMsg.Data, db);
-                    break;
-                default:
-                    throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
-            };           
-        }
-
-        private async Task CreateOrUpdateAccount(AccountData accEvent, TasksDbContext db)
+        private async Task CreateOrUpdateAccount(AccountData accEvent, AccountingDbContext db)
         {
             var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
             if (account == null)
@@ -102,7 +97,7 @@ namespace aTES.Tasks.Services
             await db.SaveChangesAsync();
         }
 
-        private async Task DeleteAccount(AccountData accEvent, TasksDbContext db)
+        private async Task DeleteAccount(AccountData accEvent, AccountingDbContext db)
         {
             var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
             if (account == null)
@@ -118,18 +113,19 @@ namespace aTES.Tasks.Services
 
             await db.SaveChangesAsync();
         }
-    }
-    
-    //need some class to deserialize to
 
-    public class AccountData
-    {
-        public string Name { get; set; }
 
-        public string PublicKey { get; set; }
+        //need some class to deserialize to
 
-        public string Email { get; set; }
+        private class AccountData
+        {
+            public string Name { get; set; }
 
-        public string Role { get; set; }
+            public string PublicKey { get; set; }
+
+            public string Email { get; set; }
+
+            public string Role { get; set; }
+        }
     }
 }

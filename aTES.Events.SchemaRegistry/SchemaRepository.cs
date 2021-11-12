@@ -5,6 +5,9 @@ using System.IO;
 
 namespace aTES.Events.SchemaRegistry
 {
+    /// <summary>
+    /// Dictionary of all supported schemas
+    /// </summary>
     public class SchemaRepository
     {
         private Dictionary<SchemaDescriptor, JSchema> _schemas = new Dictionary<SchemaDescriptor, JSchema>();

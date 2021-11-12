@@ -1,0 +1,78 @@
+﻿@page "/billing"
+
+@inject BillingService BillingService
+@inject AuthenticationStateProvider AuthState
+
+@attribute [Authorize]
+
+<h3>Billing list</h3>
+
+<div>
+    Current amount:  
+    @if (loading)
+    {
+        <span class="spinner-border spinner-border-lg align-center"></span>
+    }
+    else
+    {
+        <span>currentTotal</span>
+
+    }
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th style="width: 20%">Amount</th>
+            <th style="width: 80%">Task</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (billingRows != null)
+        {
+            foreach (var billlingItem in billingRows)
+            {
+                <tr>
+                    <td>@billlingItem.Amount</td>
+                    <td>@billlingItem.TaskDescription</td>
+                </tr>
+            }
+        }
+        @if (loading)
+        {
+            <tr>
+                <td colspan="4" class="text-center">
+                    <span class="spinner-border spinner-border-lg align-center"></span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+
+
+    private bool loading;
+    private IList<BillintRowModel> billingRows;
+    private AuthenticationState aState;
+    private string publicId;
+    private decimal currentTotal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+
+        aState = await AuthState.GetAuthenticationStateAsync();
+        publicId = aState.User?.Claims.FirstOrDefault(c => c.Type == PopugClaims.PublicKey).Value;
+
+        await ReloadBilling();
+        loading = false;
+    }
+
+
+    private async Task ReloadBilling()  
+    {
+        billingRows = await BillingService.GetBillingList(publicId);
+        currentTotal = await BillingService.GetCurrentAmount(publicId);
+    }
+}
