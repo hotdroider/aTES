@@ -1,0 +1,48 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+
+    <div class="main">
+
+        <nav class="navbar navbar-expand navbar-dark bg-dark">
+            <div class="navbar-nav">
+                <NavLink href="" Match="NavLinkMatch.All" class="nav-item nav-link">Home</NavLink>
+
+                <NavLink href="billing" class="nav-item nav-link">Billing</NavLink>
+
+                <AuthorizeView Roles="admin,manager">
+                    <Authorized>
+                        <NavLink href="management" class="nav-item nav-link">Management</NavLink>
+                    </Authorized>
+                </AuthorizeView>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <NavLink class="nav-item nav-link">Hello, @context.User.Identity.Name</NavLink>
+                        <NavLink href="logout" class="nav-item nav-link">Logout</NavLink>
+                    </Authorized>
+                    <NotAuthorized>
+                        <NavLink href="login" class="nav-item nav-link">Login</NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </nav>
+
+        <div class="content px-4">
+
+            <aTES.Blazor.Alerts.Alert />
+
+            @Body
+        </div>
+    </div>
+</div>
+
+@inject AuthenticationStateProvider AuthState
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var aState = await AuthState.GetAuthenticationStateAsync();
+        base.OnInitializedAsync();
+    }
+
+}

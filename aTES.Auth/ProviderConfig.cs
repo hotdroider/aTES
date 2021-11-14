@@ -62,6 +62,40 @@ namespace aTES.Auth
                     AllowedScopes = { "openid", "profile", "email", "roles", "publickey" },
 
                     AllowOfflineAccess = true
+                },
+                new Client
+                {
+                    ClientId = "aTES.Accounting",
+                    ClientName="aTES Accounting Service",
+                    ClientSecrets = { new Secret("aTES.Accounting".Sha256()) },
+
+                    AllowedGrantTypes = GrantTypes.Code,
+                    RequireConsent = false,
+                    RequirePkce = true,
+
+                    RedirectUris = { "http://localhost:1645/signin-oidc" },
+                    PostLogoutRedirectUris = { "http://localhost:1645/signout-callback-oidc" },
+
+                    AllowedScopes = { "openid", "profile", "email", "roles", "publickey" },
+
+                    AllowOfflineAccess = true
+                },
+                new Client
+                {
+                    ClientId = "aTES.Analytics",
+                    ClientName="aTES Analytics Service",
+                    ClientSecrets = { new Secret("aTES.Analytics".Sha256()) },
+
+                    AllowedGrantTypes = GrantTypes.Code,
+                    RequireConsent = false,
+                    RequirePkce = true,
+
+                    RedirectUris = { "http://localhost:1643/signin-oidc" },
+                    PostLogoutRedirectUris = { "http://localhost:1643/signout-callback-oidc" },
+
+                    AllowedScopes = { "openid", "profile", "email", "roles", "publickey" },
+
+                    AllowOfflineAccess = true
                 }
             };   
     }

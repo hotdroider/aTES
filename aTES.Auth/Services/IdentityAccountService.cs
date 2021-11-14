@@ -1,9 +1,8 @@
 ﻿using aTES.Auth.Data;
-using aTES.Auth.Kafka;
 using aTES.Auth.Models.Account;
-using aTES.Blazor;
+using aTES.Common;
 using aTES.Common.Kafka;
-using Microsoft.AspNetCore.Components;
+using aTES.Events.SchemaRegistry;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -18,22 +17,24 @@ namespace aTES.Auth.Services
     {
         private readonly UserManager<PopugUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly NavigationManager _navManager;
+        private readonly SchemaRegistry _schemaRegistry;
 
         private readonly IProducer _producer;
 
+        private const string PRODUCER = "aTES.Auth";
+
         public PopugUser User { get; private set; }
 
-        public IdentityAccountService(SignInManager<PopugUser> signInManager,
+        public IdentityAccountService(
             UserManager<PopugUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            NavigationManager navigationManager,
+            SchemaRegistry schemaRegistry,
             IProducer producer)
         {
             _userManager = userManager;
             _roleManager = roleManager;
-            _navManager = navigationManager;
             _producer = producer;
+            _schemaRegistry = schemaRegistry;
         }
 
         public async Task Initialize()
@@ -81,7 +82,7 @@ namespace aTES.Auth.Services
             if (!res.Succeeded)
                 throw new Exception(string.Join(Environment.NewLine, res.Errors.Select(r => r.Description)));
 
-            await SendCUDAsync("Create", newUser);
+            await SendCUDAsync("Accounts.Created", 1, newUser);
         }
 
         public async Task<IList<PopugUser>> GetAll()
@@ -112,7 +113,7 @@ namespace aTES.Auth.Services
             await _userManager.RemoveFromRolesAsync(user, Enum.GetValues<PopugRoles>().Select(r => r.ToString()));
             await _userManager.AddToRoleAsync(user, model.Role.ToString());
 
-            await SendCUDAsync("Update", user);
+            await SendCUDAsync("Accounts.Updated", 1, user);
         }
 
         public async Task Delete(string id)
@@ -122,17 +123,48 @@ namespace aTES.Auth.Services
 
             await _userManager.UpdateAsync(user);
 
-            await SendCUDAsync("Delete", user);
+            await SendCUDAsync("Accounts.Deleted", 1, user);
         }
 
-        private Task SendCUDAsync(string messageType, PopugUser user)
+        /// <summary>
+        /// Build, validate and send CUD event for account
+        /// </summary>
+        private Task SendCUDAsync(string eventType, int version, PopugUser popug)
         {
-            return _producer.ProduceAsync(new
+            var evnt = new Event()
             {
-                Type = messageType,
-                At = DateTime.UtcNow,
-                Account = new AccountMsg(user)
-            }, "Accounts-stream");
+                Name = eventType,
+                Producer = PRODUCER,
+                Version = version
+            };
+
+            evnt.Data = eventType switch
+            {
+                "Accounts.Created" => new
+                {
+                    Name = popug.UserName,
+                    PublicKey = popug.PublicKey,
+                    Email = popug.Email,
+                    Role = popug.Role.ToString(),
+                },
+                "Accounts.Updated" => new
+                {
+                    Name = popug.UserName,
+                    PublicKey = popug.PublicKey,
+                    Email = popug.Email,
+                    Role = popug.Role.ToString(),
+                },
+                "Accounts.Deleted" => new
+                {
+                    PublicKey = popug.PublicKey,
+                },
+                _ => throw new ArgumentException($"Unsupported event type {eventType}")
+            };
+
+            _schemaRegistry.ThrowIfValidationFails(evnt, eventType, version);
+
+            return _producer.ProduceAsync(evnt, "Accounts-stream");
         }
+
     }
 }

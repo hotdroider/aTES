@@ -10,12 +10,22 @@
     <DataAnnotationsValidator />
 
     <div class="form-row">
-        <div class="form-group col">
+
+        <div class="form-row">
+            <div class="form-group col-4">
+                <label>Jira ID</label>
+                <InputText @bind-Value="model.JiraId" class="form-control" />
+                <ValidationMessage For="@(() => model.JiraId)" />
+            </div>
+        </div>
+
+        <div class="form-group col-8">
             <label>Name</label>
             <InputText @bind-Value="model.Name" class="form-control" />
             <ValidationMessage For="@(() => model.Name)" />
         </div>
     </div>
+
 
     <div class="form-row">
         <div class="form-group col">

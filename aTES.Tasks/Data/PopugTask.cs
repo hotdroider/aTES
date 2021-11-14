@@ -28,6 +28,11 @@ namespace aTES.Tasks.Data
         public string Description { get; set; }
 
         /// <summary>
+        /// Jira task id
+        /// </summary>
+        public string JiraId { get; set; } //ala UBERPOP-42
+
+        /// <summary>
         /// Public account key of task assignee
         /// </summary>
         public string AssignedOn { get; set; }

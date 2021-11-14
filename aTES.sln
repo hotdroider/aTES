@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31729.503
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Auth", "aTES.Auth\aTES.Auth.csproj", "{5C2D979A-FB04-41C1-9043-408B26522F6B}"
 EndProject
@@ -12,6 +12,14 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Blazor", "aTES.Blazor\aTES.Blazor.csproj", "{2F7F0DF1-543C-44B7-881F-5D101980FB0E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{1117F48B-5246-414A-AAB1-1008BF8409E4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Events.SchemaRegistry", "aTES.Events.SchemaRegistry\aTES.Events.SchemaRegistry.csproj", "{94D941A8-57F0-4B74-8016-68A350D34E83}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Accounting", "aTES.Accounting\aTES.Accounting.csproj", "{1B90D23D-9F6E-4589-A167-DD22F2D96185}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Analytics", "aTES.Analytics\aTES.Analytics.csproj", "{ED2375C4-1806-419A-A235-4841E78322CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTES.DayCompletion", "aTES.Jobs.DayCompletion\aTES.DayCompletion.csproj", "{2590569C-879B-4618-A304-E9DE3CE59782}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +43,22 @@ Global
 		{2F7F0DF1-543C-44B7-881F-5D101980FB0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F7F0DF1-543C-44B7-881F-5D101980FB0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F7F0DF1-543C-44B7-881F-5D101980FB0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94D941A8-57F0-4B74-8016-68A350D34E83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94D941A8-57F0-4B74-8016-68A350D34E83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94D941A8-57F0-4B74-8016-68A350D34E83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94D941A8-57F0-4B74-8016-68A350D34E83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B90D23D-9F6E-4589-A167-DD22F2D96185}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED2375C4-1806-419A-A235-4841E78322CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -42,6 +66,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{F77E0A46-A0E6-4B70-B97D-AF322F867830} = {1117F48B-5246-414A-AAB1-1008BF8409E4}
 		{2F7F0DF1-543C-44B7-881F-5D101980FB0E} = {1117F48B-5246-414A-AAB1-1008BF8409E4}
+		{94D941A8-57F0-4B74-8016-68A350D34E83} = {1117F48B-5246-414A-AAB1-1008BF8409E4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EAD7BFC-C4AB-4A06-AC72-E48EBE01E9EA}

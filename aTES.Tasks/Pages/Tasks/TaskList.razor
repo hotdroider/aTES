@@ -12,7 +12,7 @@
 </div>
 
 <div class="m-1">
-    @* Anyone can shuggle except devs *@
+    @* Anyone can shuffle except devs *@
     @if (aState == null)
     {
         <p><em>Loading...</em></p>
@@ -38,7 +38,7 @@
             {
                 <tr>
                     <td>@task.Name</td>
-                    <td>@task.Status</td>
+                    <td>@PopugizeStatus(task)</td>
 
                     <td style="white-space: nowrap">
                         <NavLink href="@($"tasks/{task.Id}")" class="btn btn-sm btn-primary mr-1">View</NavLink>
@@ -70,12 +70,12 @@
     protected override async Task OnInitializedAsync()
     {
         loading = true;
-        await ReloadTasks();
-        loading = false;
 
         aState = await AuthState.GetAuthenticationStateAsync();
-
         publicId = aState.User?.Claims.FirstOrDefault(c => c.Type == PopugClaims.PublicKey).Value;
+
+        await ReloadTasks();
+        loading = false;
     }
 
     private async void Shuffle()
@@ -90,6 +90,16 @@
         await TaskService.CompleteTask(taskId);
         await ReloadTasks();
         StateHasChanged();
+    }
+
+    private string PopugizeStatus(PopugTask task)
+    {
+        return task.Status switch
+        {
+            TaskState.Open => "птичка в клетке",
+            TaskState.Completed => "просо в миске",
+            _ => task.Status.ToString()
+        };
     }
 
     private async Task ReloadTasks() => tasks = await TaskService.GetTasks(publicId);

@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\aTES.Blazor\aTES.Blazor.csproj" />
     <ProjectReference Include="..\aTES.Common\aTES.Common.csproj" />
+    <ProjectReference Include="..\aTES.Events.SchemaRegistry\aTES.Events.SchemaRegistry.csproj" />
   </ItemGroup>
 
 </Project>

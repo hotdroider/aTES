@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "title": "Day.Completed.v1",
+  "description": "JSON Schema for business day completed event (version 1)",
+
+  "definitions": {
+
+    "event_data": {
+
+      "type": "object",
+
+      "properties": {
+        "DateCompleted": { "type": "string" }
+      },
+
+      "required": [ "DateCompleted" ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "Id": { "type": "string" },
+    "Name": { "type": "string" },
+    "Producer": { "type": "string" },
+    "Version": { "type": "number" },
+    "Time": { "type": "string" },
+
+    "Data": {
+      "$ref": "#/definitions/event_data"
+    }
+  },
+
+  "required": [ "Id", "Name", "Version", "Time" ]
+}

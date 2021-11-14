@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace aTES.Common
 {
@@ -33,8 +32,10 @@ namespace aTES.Common
                        options.Scope.Add("openid");
                        options.Scope.Add("profile");
                        options.Scope.Add("email");
+                       options.Scope.Add("roles");
                        options.Scope.Add("publickey");
                        options.ClaimActions.MapUniqueJsonKey("publickey", "publickey");
+                       options.ClaimActions.MapUniqueJsonKey("role", "role");
                        options.RequireHttpsMetadata = false;
 
                        options.TokenValidationParameters.NameClaimType = "name";

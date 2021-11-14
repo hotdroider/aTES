@@ -7,7 +7,7 @@ namespace aTES.Common.Kafka
 {
     public interface IConsumer
     {
-        public Task<ICommitablaMessage<Ignore, string>> ConsumeAsync();
+        public Task<ICommitablaMessage<Ignore, string>> ConsumeAsync(CancellationToken cancellationToken);
     }
 
     public interface ICommitablaMessage<TKey, TValue>
@@ -36,14 +36,14 @@ namespace aTES.Common.Kafka
             _consumer.Subscribe(topic);
         }
 
-        public async Task<ICommitablaMessage<Ignore, string>> ConsumeAsync()
+        public async Task<ICommitablaMessage<Ignore, string>> ConsumeAsync(CancellationToken cancellationToken)
         {
             return await Task.Run(async () =>
             {
                 while(true)
                 try
                 {
-                    var result = _consumer.Consume();
+                    var result = _consumer.Consume(cancellationToken);
                     return new ReceivedMessage<Ignore, string>(result, _consumer);
                 }
                 catch(ConsumeException)
