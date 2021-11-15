@@ -1,0 +1,107 @@
+﻿@page "/tasks"
+
+@inject TaskService TaskService
+@inject AuthenticationStateProvider AuthState
+
+@attribute [Authorize]
+
+<h1>Tasks</h1>
+
+<div class="m-1">
+    <NavLink href="tasks/add" class="btn btn-sm btn-success mb-2">Create Task</NavLink>
+</div>
+
+<div class="m-1">
+    @* Anyone can shuffle except devs *@
+    @if (aState == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!aState.User.IsInRole("Developer"))
+    {
+        <NavLink class="btn btn-sm btn-info mb-2" @onclick="@(() => Shuffle())">Reassign Task</NavLink>
+    }
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th style="width: 40%">Name</th>
+            <th style="width: 40%">Status</th>
+            <th style="width: 20%"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (tasks != null)
+        {
+            foreach (var task in tasks)
+            {
+                <tr>
+                    <td>@task.Name</td>
+                    <td>@PopugizeStatus(task)</td>
+
+                    <td style="white-space: nowrap">
+                        <NavLink href="@($"tasks/{task.Id}")" class="btn btn-sm btn-primary mr-1">View</NavLink>
+                        <button @onclick="@(() => Complete(task.Id))" disabled="@(task.Status == TaskState.Completed)" class="btn btn-sm btn-light btn-delete-user">
+                            Complete
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+        @if (loading)
+        {
+            <tr>
+                <td colspan="4" class="text-center">
+                    <span class="spinner-border spinner-border-lg align-center"></span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+
+    private bool loading;
+    private IList<PopugTask> tasks;
+    private AuthenticationState aState;
+    private string publicId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+
+        aState = await AuthState.GetAuthenticationStateAsync();
+        publicId = aState.User?.Claims.FirstOrDefault(c => c.Type == PopugClaims.PublicKey).Value;
+
+        await ReloadTasks();
+        loading = false;
+    }
+
+    private async void Shuffle()
+    {
+        await TaskService.ShuffleTasksAsync();
+        await ReloadTasks();
+        StateHasChanged();
+    }
+
+    private async void Complete(int taskId)
+    {
+        await TaskService.CompleteTask(taskId);
+        await ReloadTasks();
+        StateHasChanged();
+    }
+
+    private string PopugizeStatus(PopugTask task)
+    {
+        return task.Status switch
+        {
+            TaskState.Open => "птичка в клетке",
+            TaskState.Completed => "просо в миске",
+            _ => task.Status.ToString()
+        };
+    }
+
+    private async Task ReloadTasks() => tasks = await TaskService.GetTasks(publicId);
+
+}
