@@ -1,13 +1,12 @@
-﻿using aTES.Common.Kafka;
-using aTES.Accounting.Data;
+﻿using aTES.Accounting.Data;
+using aTES.Common;
+using aTES.Common.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using aTES.Common;
 
 namespace aTES.Accounting.Services
 {
@@ -19,62 +18,39 @@ namespace aTES.Accounting.Services
         private readonly IServiceScopeFactory _scopeFactory;
 
         private readonly IConsumer _accountConsumer;
-        private readonly IProducer _producer;
 
-        public AccountsUpdater(IServiceScopeFactory scopeFactory, 
-            IConsumerFactory consumerFactory,
-            IProducer producer)
+        public AccountsUpdater(IServiceScopeFactory scopeFactory,
+            IConsumerFactory consumerFactory)
         {
             _scopeFactory = scopeFactory;
-            _producer = producer;
-            _accountConsumer = consumerFactory.CreateConsumer("aTES.Accounting.AccountUpdater", "Accounts-stream");
+            _accountConsumer = consumerFactory
+                .DefineConsumer<AccountData>("aTES.Accounting.AccountUpdater", "Accounts-stream")
+                .SetFailoverPolicy(FailoverPolicy.ToDlq)
+                .SetProcessor(ProcessAccountMessage)
+                .Build();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        private async Task ProcessAccountMessage(Event<AccountData> accMsg)
         {
             var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-            while (!stoppingToken.IsCancellationRequested)
+            switch (accMsg.Name, accMsg.Version)
             {
-                string eventBody = null;
-                try
-                {
-                    var msgRaw = await _accountConsumer.ConsumeAsync(stoppingToken);
-                    eventBody = msgRaw.Value;
-                    var accMsg = JsonSerializer.Deserialize<Event<AccountData>>(eventBody);
-
-                    switch (accMsg.Name, accMsg.Version)
-                    {
-                        case ("Accounts.Created", 1):
-                        case ("Accounts.Updated", 1):
-                            await CreateOrUpdateAccount(accMsg.Data, db);
-                            break;
-                        case ("Accounts.Deleted", 1):
-                            await DeleteAccount(accMsg.Data, db);
-                            break;
-                        default:
-                            throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
-                    };
-
-                    msgRaw.Commit();
-                }
-                catch (Exception ex)
-                {
-                    await TryReproduceToDLQ(eventBody);
-                }
-            }
+                case ("Accounts.Created", 1):
+                case ("Accounts.Updated", 1):
+                    await CreateOrUpdateAccount(accMsg.Data, db);
+                    break;
+                case ("Accounts.Deleted", 1):
+                    await DeleteAccount(accMsg.Data, db);
+                    break;
+                default:
+                    throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
+            };
         }
 
-        private async Task TryReproduceToDLQ(string messageBody)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            try
-            {
-                await _producer.ProduceAsync(messageBody, "Accounts-Dead-Letter-Queue");
-            }
-            catch(Exception ex)
-            {
-                //log, panic, save to db...
-            }
+            return _accountConsumer.ProcessAsync(stoppingToken);
         }
 
         private async Task CreateOrUpdateAccount(AccountData accEvent, AccountingDbContext db)
@@ -102,8 +78,8 @@ namespace aTES.Accounting.Services
             var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
             if (account == null)
             {
-                account = new Account() 
-                { 
+                account = new Account()
+                {
                     PublicKey = accEvent.PublicKey,
                 };
                 await db.Accounts.AddAsync(account);

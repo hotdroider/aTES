@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace aTES.Accounting
 {
@@ -32,10 +33,17 @@ namespace aTES.Accounting
 
 
             services.AddPopugEventSchemas(Configuration);
+            services.AddLogging(c =>
+            {
+                c.ClearProviders();
+                c.AddConsole();
+            });
 
+            var logger = services.BuildServiceProvider().GetService<ILogger<Startup>>();
             var kafkaBrokers = Configuration.GetSection("Kafka:Brokers").Get<string[]>();
-            services.AddSingleton<IProducer>(s => new CommonProducer(kafkaBrokers));
-            services.AddSingleton<IConsumerFactory>(s => new ConsumerFactory(kafkaBrokers));
+
+            services.AddSingleton<IProducer>(s => new CommonProducer(logger, kafkaBrokers, FailoverPolicy.WithRetry(3)));
+            services.AddSingleton<IConsumerFactory>(s => new ConsumerFactory(kafkaBrokers, logger));
 
             services.AddPopugBlazor();
 

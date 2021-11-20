@@ -1,14 +1,13 @@
-﻿using aTES.Common.Kafka;
-using aTES.Accounting.Data;
+﻿using aTES.Accounting.Data;
+using aTES.Common;
+using aTES.Common.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Text.Json;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using aTES.Common;
-using System.Linq;
 
 namespace aTES.Accounting.Services
 {
@@ -29,51 +28,53 @@ namespace aTES.Accounting.Services
         {
             _scopeFactory = scopeFactory;
             _producer = producer;
-            _taskChangeConsumer = consumerFactory.CreateConsumer("aTES.Accounting.BillingProcessor", "Tasks-state-changes");
-            _cycleEndConsumer = consumerFactory.CreateConsumer("aTES.Accounting.CycleEndProcessor", "Date-completions");
+
+            _taskChangeConsumer = consumerFactory
+                .DefineConsumer<TaskStateData>("aTES.Accounting.BillingProcessor", "Tasks-state-changes")
+                .SetFailoverPolicy(FailoverPolicy.ToDlq)
+                .SetProcessor(ProcessTaskAsync)
+                .Build();
+
+            _cycleEndConsumer = consumerFactory
+                .DefineConsumer<DateCompletedData>("aTES.Accounting.CycleEndProcessor", "Date-completions")
+                .SetFailoverPolicy(FailoverPolicy.ToDlq)
+                .SetProcessor(ProcessDateCloseAsync)
+                .Build();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var taskChanges = ProcessTaskChangesAsync(stoppingToken);
-            var cycleEnds = ProcessCycleEndsAsync(stoppingToken);
+            var taskChanges = _taskChangeConsumer.ProcessAsync(stoppingToken);
+            var cycleEnds = _cycleEndConsumer.ProcessAsync(stoppingToken);
 
             await Task.WhenAll(taskChanges, cycleEnds);
         }
 
-        /// <summary>
-        /// Task assigns and completes listener
-        /// </summary>
-        private async Task ProcessTaskChangesAsync(CancellationToken stoppingToken)
+        private async Task ProcessTaskAsync(Event<TaskStateData> taskStateMsg)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            switch (taskStateMsg.Name, taskStateMsg.Version)
             {
-                string eventBody = null;
-                try
-                {
-                    var msgRaw = await _taskChangeConsumer.ConsumeAsync(stoppingToken);
-                    eventBody = msgRaw.Value;
-                    var taskStateMsg = JsonSerializer.Deserialize<Event<TaskStateData>>(eventBody);
+                case ("Tasks.Assigned", 1):
+                    await ChargeTaskAssignement(taskStateMsg.Data.PublicKey, taskStateMsg.Data.AssigneePublicKey);
+                    break;
+                case ("Tasks.Completed", 1):
+                    await AwardTask(taskStateMsg.Data.PublicKey, taskStateMsg.Data.AssigneePublicKey);
+                    break;
+                default:
+                    throw new Exception($"Unsupported message {taskStateMsg.Name}{taskStateMsg.Version}");
+            };
+        }
 
-                    switch (taskStateMsg.Name, taskStateMsg.Version)
-                    {
-                        case ("Tasks.Assigned", 1):
-                            await ChargeTaskAssignement(taskStateMsg.Data.PublicKey, taskStateMsg.Data.AssigneePublicKey);
-                            break;
-                        case ("Tasks.Completed", 1):
-                            await AwardTask(taskStateMsg.Data.PublicKey, taskStateMsg.Data.AssigneePublicKey);
-                            break;
-                        default:
-                            throw new Exception($"Unsupported message {taskStateMsg.Name}{taskStateMsg.Version}");
-                    };
-
-                    msgRaw.Commit();
-                }
-                catch (Exception ex)
-                {
-                    await TryReproduceToDLQ(eventBody, "Tasks-state-change-dlq");
-                }
-            }
+        private async Task ProcessDateCloseAsync(Event<DateCompletedData> dateCloseData)
+        {
+            switch (dateCloseData.Name, dateCloseData.Version)
+            {
+                case ("Day.Completed", 1):
+                    await ClosePaymentCyclesAsync(dateCloseData.Data.DateCompleted);
+                    break;
+                default:
+                    throw new Exception($"Unsupported message {dateCloseData.Name}{dateCloseData.Version}");
+            };
         }
 
         /// <summary>
@@ -129,8 +130,8 @@ namespace aTES.Accounting.Services
 
         private async Task<Account> GetOrAddPopug(AccountingDbContext db, string publicKey)
         {
-            var popug = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == publicKey);       
-            if(popug == null) //we need popug record, hope this updates by CUD later...
+            var popug = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == publicKey);
+            if (popug == null) //we need popug record, hope this updates by CUD later...
             {
                 popug = new Account() { PublicKey = publicKey, IsDeleted = false };
                 db.Accounts.Add(popug);
@@ -145,7 +146,7 @@ namespace aTES.Accounting.Services
             var task = await db.Tasks.FirstOrDefaultAsync(a => a.PublicKey == publicKey);
             if (task == null)  //we need task record, hope this updates by CUD later...
             {
-                task = new PopugTask() { PublicKey = publicKey, Name = "Unknown"};
+                task = new PopugTask() { PublicKey = publicKey, Name = "Unknown" };
                 db.Tasks.Add(task);
                 await db.SaveChangesAsync();
             }
@@ -161,11 +162,11 @@ namespace aTES.Accounting.Services
             var cycle = await db.BillingCycles.FirstOrDefaultAsync(a => a.AccountId == popugId && a.State == BillingCycleState.Open);
             if (cycle == null)  //we need task record, hope this updates by CUD later...
             {
-                cycle = new BillingCycle() 
-                { 
+                cycle = new BillingCycle()
+                {
                     AccountId = popugId,
                     State = BillingCycleState.Open,
-                    Date = DateTime.Today,                     
+                    Date = DateTime.Today,
                 };
                 db.BillingCycles.Add(cycle);
                 await db.SaveChangesAsync();
@@ -174,42 +175,13 @@ namespace aTES.Accounting.Services
             return cycle;
         }
 
-        private async Task ProcessCycleEndsAsync(CancellationToken stoppingToken)
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                string eventBody = null;
-                try
-                {
-                    var msgRaw = await _cycleEndConsumer.ConsumeAsync(stoppingToken);
-                    eventBody = msgRaw.Value;
-                    var dateCloseData = JsonSerializer.Deserialize<Event<DateCompletedData>>(eventBody);
-
-                    switch (dateCloseData.Name, dateCloseData.Version)
-                    {
-                        case ("Day.Completed", 1):
-                            await ClosePaymentCyclesAsync(dateCloseData.Data.DateCompleted);
-                            break;
-                        default:
-                            throw new Exception($"Unsupported message {dateCloseData.Name}{dateCloseData.Version}");
-                    };
-
-                    msgRaw.Commit();
-                }
-                catch (Exception ex)
-                {
-                    await TryReproduceToDLQ(eventBody, "Date-completions-dlq");
-                }
-            }
-        }
-
         private async Task ClosePaymentCyclesAsync(DateTime completedDate)
         {
             var db = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<AccountingDbContext>();
 
             var openedCycles = await db.BillingCycles.Where(c => c.State == BillingCycleState.Open && c.Date == completedDate).ToListAsync();
 
-            foreach(var cycle in openedCycles)
+            foreach (var cycle in openedCycles)
             {
                 //calc popugs earnings
                 var amount = cycle.Transactions.Sum(t =>
@@ -228,21 +200,6 @@ namespace aTES.Accounting.Services
             }
 
             await db.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Failed message reproduce to dead letter queue
-        /// </summary>
-        private async Task TryReproduceToDLQ(string messageBody, string dlqTopic)
-        {
-            try
-            {
-                await _producer.ProduceAsync(messageBody, dlqTopic);
-            }
-            catch (Exception ex)
-            {
-                //log, save to db, panic...
-            }
         }
 
         private class TaskStateData

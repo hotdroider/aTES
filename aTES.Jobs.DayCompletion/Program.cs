@@ -3,6 +3,7 @@ using aTES.Events.SchemaRegistry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace aTES.DayCompletion
 {
@@ -18,7 +19,8 @@ namespace aTES.DayCompletion
                 .ConfigureServices((hostContext, services) =>
                 {
                     var kafkaBrokers = hostContext.Configuration.GetSection("Kafka:Brokers").Get<string[]>();
-                    services.AddSingleton<IProducer>(s => new CommonProducer(kafkaBrokers));
+                    var logger = services.BuildServiceProvider().GetService<ILogger<Program>>();
+                    services.AddSingleton<IProducer>(s => new CommonProducer(logger, kafkaBrokers, FailoverPolicy.WithRetry(3)));
                     services.AddPopugEventSchemas(hostContext.Configuration);
                     services.AddHostedService<Worker>();
                 });
