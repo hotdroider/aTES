@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Accounting", "aTES.Acc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Analytics", "aTES.Analytics\aTES.Analytics.csproj", "{ED2375C4-1806-419A-A235-4841E78322CF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTES.DayCompletion", "aTES.Jobs.DayCompletion\aTES.DayCompletion.csproj", "{2590569C-879B-4618-A304-E9DE3CE59782}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.DayCompletion", "aTES.Jobs.DayCompletion\aTES.DayCompletion.csproj", "{2590569C-879B-4618-A304-E9DE3CE59782}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

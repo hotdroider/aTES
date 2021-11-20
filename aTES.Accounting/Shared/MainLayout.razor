@@ -38,13 +38,3 @@
         </div>
     </div>
 </div>
-
-@inject AuthenticationStateProvider AuthState
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        var aState = await AuthState.GetAuthenticationStateAsync();
-        base.OnInitializedAsync();
-    }
-
-}

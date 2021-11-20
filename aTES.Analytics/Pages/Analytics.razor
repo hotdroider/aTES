@@ -1,0 +1,67 @@
+﻿@page "/analytics"
+
+@inject AnalyticsService AnalyticsService
+
+@attribute [Authorize]
+
+<h3>Analytics</h3>
+
+<div>
+    @if (loading)
+    {
+        <span class="spinner-border spinner-border-lg align-center"></span>
+    }
+    else
+    {
+        <div>
+            Popugs with negative balances:
+            <span>@poorPopugsCount</span>
+        </div>
+
+        <div>
+            Todays management earnings:
+            <span>@todayManagementEarns</span>
+        </div>
+
+        <div>
+            Highest task award for a last day:
+            <span>@todaysMostExpensiveAward</span>
+        </div>
+
+        <div>
+            Highest task award for a last week:
+            <span>@lastWeekMostExpensiveAward</span>
+        </div>
+
+        <div>
+            Highest task award for a last month:
+            <span>@lastMonthMostExpensiveAward</span>
+        </div>
+    }
+</div>
+
+@code {
+
+    private bool loading;
+    private int poorPopugsCount;
+    private decimal todayManagementEarns;
+    private decimal todaysMostExpensiveAward;
+    private decimal lastWeekMostExpensiveAward;
+    private decimal lastMonthMostExpensiveAward;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+
+        poorPopugsCount = await AnalyticsService.GetMinusPopugsAsync();
+        todayManagementEarns = await AnalyticsService.GetTodaysManagementEarningsAsync();
+
+        todaysMostExpensiveAward = await AnalyticsService.GetMostExpensiveTask(1);
+        lastWeekMostExpensiveAward = await AnalyticsService.GetMostExpensiveTask(7);
+        lastMonthMostExpensiveAward = await AnalyticsService.GetMostExpensiveTask(30);
+
+        loading = false;
+    }
+
+}
