@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.Analytics", "aTES.Anal
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aTES.DayCompletion", "aTES.Jobs.DayCompletion\aTES.DayCompletion.csproj", "{2590569C-879B-4618-A304-E9DE3CE59782}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aTES.PaymentProcessor", "aTES.PaymentProcessor\aTES.PaymentProcessor.csproj", "{966DA218-4CA2-4344-9FFB-7C5DF68F94FA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{2590569C-879B-4618-A304-E9DE3CE59782}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2590569C-879B-4618-A304-E9DE3CE59782}.Release|Any CPU.Build.0 = Release|Any CPU
+		{966DA218-4CA2-4344-9FFB-7C5DF68F94FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{966DA218-4CA2-4344-9FFB-7C5DF68F94FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{966DA218-4CA2-4344-9FFB-7C5DF68F94FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{966DA218-4CA2-4344-9FFB-7C5DF68F94FA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
