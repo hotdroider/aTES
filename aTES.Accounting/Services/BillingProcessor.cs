@@ -1,6 +1,7 @@
 ﻿using aTES.Accounting.Data;
 using aTES.Common;
 using aTES.Common.Kafka;
+using aTES.Events.SchemaRegistry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,13 +22,18 @@ namespace aTES.Accounting.Services
         private readonly IConsumer _taskChangeConsumer;
         private readonly IConsumer _cycleEndConsumer;
         private readonly IProducer _producer;
+        private readonly SchemaRegistry _schemaRegistry;
+
+        public const string PRODUCER = "aTES.Accounting";
 
         public BillingProcessor(IServiceScopeFactory scopeFactory,
             IConsumerFactory consumerFactory,
-            IProducer producer)
+            IProducer producer,
+            SchemaRegistry schemaRegistry)
         {
             _scopeFactory = scopeFactory;
             _producer = producer;
+            _schemaRegistry = schemaRegistry;
 
             _taskChangeConsumer = consumerFactory
                 .DefineConsumer<TaskStateData>("aTES.Accounting.BillingProcessor", "Tasks-state-changes")
@@ -91,13 +97,18 @@ namespace aTES.Accounting.Services
             var tran = new Transaction()
             {
                 TaskId = task?.Id,
+                Date = DateTime.UtcNow,
+                Task = task,
+                BillingCycle = cycle,
                 Type = TransactionType.Credit,
-                Amount = new Random(Guid.NewGuid().GetHashCode()).Next(20, 40)
+                Credit = new Random(Guid.NewGuid().GetHashCode()).Next(20, 40)
             };
             cycle.Transactions.Add(tran);
-            cycle.Amount += tran.Amount;
+            cycle.Amount += tran.Credit;
 
             await db.SaveChangesAsync();
+
+            await SendTransactionEventAsync("Accounts.Credited", 1, tran);
         }
 
 
@@ -119,13 +130,18 @@ namespace aTES.Accounting.Services
             var tran = new Transaction()
             {
                 TaskId = task?.Id,
+                Date = DateTime.UtcNow,
+                Task = task,
+                BillingCycle = cycle,
                 Type = TransactionType.Credit,
-                Amount = task.AssignFee.Value
+                Debit = task.AssignFee.Value
             };
             cycle.Transactions.Add(tran);
-            cycle.Amount -= tran.Amount;
+            cycle.Amount -= tran.Debit;
 
             await db.SaveChangesAsync();
+
+            await SendTransactionEventAsync("Accounts.Debited", 1, tran);
         }
 
         private async Task<Account> GetOrAddPopug(AccountingDbContext db, string publicKey)
@@ -183,23 +199,96 @@ namespace aTES.Accounting.Services
 
             foreach (var cycle in openedCycles)
             {
+                cycle.State = BillingCycleState.Closed;
+
                 //calc popugs earnings
-                var amount = cycle.Transactions.Sum(t =>
-                    t.Type == TransactionType.Debit ? -t.Amount : //assignes
-                    t.Type == TransactionType.Credit ? t.Amount : //completion awards
-                    t.Type == TransactionType.Init ? -t.Amount : //previous day debt
-                    0);
+                var amount = cycle.Transactions.Sum(t => t.Credit - t.Debit);
 
-                var tran = new Transaction()
+                if (amount > 0)
                 {
-                    Amount = amount,
-                    BillingCycleId = cycle.Id,
-                    Type = TransactionType.Payment,
-                };
-                cycle.Transactions.Add(tran);
-            }
+                    //pay popugs his day 
+                    var tran = new Transaction()
+                    {
+                        Credit = amount,
+                        Date = DateTime.UtcNow,
+                        BillingCycle = cycle,
+                        BillingCycleId = cycle.Id,
+                        Type = TransactionType.Payment,
+                    };
+                    cycle.Transactions.Add(tran);
 
-            await db.SaveChangesAsync();
+                    await db.SaveChangesAsync();
+
+                    await SendTransactionEventAsync("Accounts.Paid", 1, tran);
+                }
+                else
+                {
+                    //move debt to next cycle
+                    var newCycle = await GetOrAddCycle(db, cycle.AccountId);
+                    //mover to next
+                    var tran = new Transaction()
+                    {
+                        Debit = -amount,
+                        Date = DateTime.UtcNow.AddDays(1).Date, //init debt for tomorrow
+                        BillingCycle = cycle,
+                        BillingCycleId = cycle.Id,
+                        Type = TransactionType.Init,
+                    };
+                    newCycle.Transactions.Add(tran);
+                    db.BillingCycles.Add(newCycle);
+
+                    await db.SaveChangesAsync();
+
+                    await SendTransactionEventAsync("Accounts.Debited", 1, tran);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Send business transaction event
+        /// </summary>
+        private async Task SendTransactionEventAsync(string eventType, int version, Transaction transaction)
+        {
+            var evnt = new Event()
+            {
+                Name = eventType,
+                Producer = PRODUCER,
+                Version = version
+            };
+
+            var task = transaction.Task;
+            var db = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<AccountingDbContext>();
+            var publicAccId = await db.Accounts.Where(acc => acc.Id == transaction.BillingCycle.AccountId).Select(a => a.PublicKey).FirstOrDefaultAsync();
+
+            evnt.Data = eventType switch
+            {
+                "Accounts.Credited" => new
+                {
+                    AccountPublicKey = publicAccId,
+                    Amount = transaction.Credit,
+                    Date = transaction.Date,
+                    Reason = $"Completion of task {task.Id}, {task.JiraId} {task.Name}",
+                },
+                "Accounts.Debited" => new
+                {
+                    AccountPublicKey = publicAccId,
+                    Amount = transaction.Debit,
+                    Date = transaction.Date,
+                    Reason = $"Assignation of task {task.Id}, {task.JiraId} {task.Name}",
+                },
+                "Accounts.Paid" => new
+                {
+                    AccountPublicKey = publicAccId,
+                    Amount = transaction.Credit,
+                    Date = transaction.Date,
+                    Reason = $"Payment for {transaction.Date.ToShortDateString()} working day",
+                },
+                _ => throw new ArgumentException($"Unsupported event type {eventType}")
+            };
+
+            _schemaRegistry.ThrowIfValidationFails(evnt, eventType, version);
+
+            await _producer.ProduceAsync(evnt, "BillingTransactions");
         }
 
         private class TaskStateData

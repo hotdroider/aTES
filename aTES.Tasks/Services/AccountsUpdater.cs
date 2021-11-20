@@ -19,20 +19,14 @@ namespace aTES.Tasks.Services
         private readonly IServiceScopeFactory _scopeFactory;
 
         private readonly IConsumer _accountConsumer;
-        private readonly IProducer _producer;
 
         public AccountsUpdater(IServiceScopeFactory scopeFactory, 
-            IConsumerFactory consumerFactory,
-            IProducer producer)
+            IConsumerFactory consumerFactory)
         {
             _scopeFactory = scopeFactory;
-            _producer = producer;
             _accountConsumer = consumerFactory
                 .DefineConsumer<AccountData>("aTES.Tasks.AccountUpdater", "Accounts-stream")
-                .SetFailoverPolicy(new FailoverPolicy()
-                {
-                    ReproduceToDLQ = true
-                })
+                .SetFailoverPolicy(FailoverPolicy.ToDlq)
                 .SetProcessor(ProcessAccountMessage)
                 .Build();
         }

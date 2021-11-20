@@ -1,7 +1,34 @@
 ﻿@page "/management"
 
+@inject BillingService BillingService
+@inject AuthenticationStateProvider AuthState
+
+@attribute [Authorize]
+
 <h3>Management</h3>
 
-@code {
+<div>
+    Management earninigs today:  
+    @if (loading)
+    {
+        <span class="spinner-border spinner-border-lg align-center"></span>
+    }
+    else
+    {
+        <span>@todaysManagementEarninigs</span>
 
+    }
+</div>
+
+@code {
+    private bool loading;
+    private AuthenticationState aState;
+    private decimal todaysManagementEarninigs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+         todaysManagementEarninigs = await BillingService.GetManagementEarnings();
+        loading = false;
+    }
 }

@@ -20,6 +20,9 @@ namespace aTES.Accounting.Services
             _accountingDbContext = accountingDbContext;
         }
 
+        /// <summary>
+        /// Current popugs balance
+        /// </summary>
         public async Task<decimal> GetCurrentAmount(string publicAccountId)
         {
             var accId = await GetInternalAccountId(publicAccountId);
@@ -29,6 +32,9 @@ namespace aTES.Accounting.Services
                 .Select(c => c.Amount).FirstOrDefaultAsync();
         }
 
+        /// <summary>
+        /// Popugs cycle info
+        /// </summary>
         public async Task<List<BillintRowModel>> GetBillingList(string publicAccountId)
         {
             var accId = await GetInternalAccountId(publicAccountId);
@@ -39,7 +45,8 @@ namespace aTES.Accounting.Services
                     .Where(t => t.Type != TransactionType.Init)
                     .Select(t => new BillintRowModel()
                     {
-                        Amount = t.Amount,
+                        Date = t.Date,
+                        Amount = t.Credit - t.Debit,
                         TransactionType = t.Type,
                         TaskDescription = t.Task == null 
                         ? string.Empty
@@ -51,6 +58,19 @@ namespace aTES.Accounting.Services
             _accountingDbContext.Accounts
                 .Where(a => a.PublicKey == publicAccountId)
                 .Select(a => a.Id).FirstOrDefaultAsync();
+
+        /// <summary>
+        /// Managers earnings on poor popugs
+        /// </summary>
+        /// <returns></returns>
+        public async Task<decimal> GetManagementEarnings()
+        {
+            return await _accountingDbContext
+                .BillingCycles
+                .Where(c => c.Date == DateTime.Today)
+                .SelectMany(c => c.Transactions.Select(t => t))
+                .SumAsync(t => t.Debit - t.Credit);
+        }
 
     }
 }

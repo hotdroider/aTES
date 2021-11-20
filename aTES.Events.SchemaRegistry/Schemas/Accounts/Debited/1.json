@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+
+  "title": "Accounts.Debeted.v1",
+  "description": "JSON Schema for Account Debet (version 1)",
+
+  "definitions": {
+
+    "event_data": {
+
+      "type": "object",
+
+      "properties": {
+        "AccountPublicKey": { "type": "string" },
+        "Amount": { "type": "number" },
+        "Date": { "type": "string" },
+        "Reason": { "type": [ "string", "null" ] }
+      },
+
+      "required": [ "AccountPublicKey", "Amount", "Date" ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "Id": { "type": "string" },
+    "Name": { "type": "string" },
+    "Producer": { "type": "string" },
+    "Version": { "type": "number" },
+    "Time": { "type": "string" },
+
+    "Data": {
+      "$ref": "#/definitions/event_data"
+    }
+  },
+
+  "required": [ "Id", "Name", "Version", "Time" ]
+}

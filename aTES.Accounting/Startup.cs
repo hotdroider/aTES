@@ -50,6 +50,8 @@ namespace aTES.Accounting
             services.AddRazorPages();
             services.AddServerSideBlazor();
 
+            services.AddScoped<BillingService>();
+
             services.AddHostedService<AccountsUpdater>();
             services.AddHostedService<TaskUpdater>();
             services.AddHostedService<BillingProcessor>();
