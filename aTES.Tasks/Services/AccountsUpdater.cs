@@ -19,55 +19,24 @@ namespace aTES.Tasks.Services
         private readonly IServiceScopeFactory _scopeFactory;
 
         private readonly IConsumer _accountConsumer;
-        private readonly IProducer _producer;
 
         public AccountsUpdater(IServiceScopeFactory scopeFactory, 
-            IConsumerFactory consumerFactory,
-            IProducer producer)
+            IConsumerFactory consumerFactory)
         {
             _scopeFactory = scopeFactory;
-            _producer = producer;
-            _accountConsumer = consumerFactory.CreateConsumer("aTES.Tasks.AccountUpdater", "Accounts-stream");
+            _accountConsumer = consumerFactory
+                .DefineConsumer<AccountData>("aTES.Tasks.AccountUpdater", "Accounts-stream")
+                .SetFailoverPolicy(FailoverPolicy.ToDlq)
+                .SetProcessor(ProcessAccountMessage)
+                .Build();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) => _accountConsumer.ProcessAsync(stoppingToken);
+
+        private async Task ProcessAccountMessage(Event<AccountData> accMsg)
         {
             var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TasksDbContext>();
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                string eventBody = null;
-                try
-                {
-                    var msgRaw = await _accountConsumer.ConsumeAsync(stoppingToken);
-                    eventBody = msgRaw.Value;
-                    var accMsg = JsonSerializer.Deserialize<Event<AccountData>>(eventBody);
-
-                    await ProcessMessage(accMsg, db);
-
-                    msgRaw.Commit();
-                }
-                catch (Exception ex)
-                {
-                    await TryReproduceToDLQ(eventBody);
-                }
-            }
-        }
-
-        private async Task TryReproduceToDLQ(string messageBody)
-        {
-            try
-            {
-                await _producer.ProduceAsync(messageBody, "Accounts-Dead-Letter-Queue");
-            }
-            catch(Exception ex)
-            {
-                //log, panic, save to db...
-            }
-        }
-
-        private async Task ProcessMessage(Event<AccountData> accMsg, TasksDbContext db)
-        {
             switch (accMsg.Name, accMsg.Version)
             {
                 case ("Accounts.Created", 1):
@@ -118,18 +87,16 @@ namespace aTES.Tasks.Services
 
             await db.SaveChangesAsync();
         }
-    }
-    
-    //need some class to deserialize to
 
-    public class AccountData
-    {
-        public string Name { get; set; }
+        private class AccountData
+        {
+            public string Name { get; set; }
 
-        public string PublicKey { get; set; }
+            public string PublicKey { get; set; }
 
-        public string Email { get; set; }
+            public string Email { get; set; }
 
-        public string Role { get; set; }
+            public string Role { get; set; }
+        }
     }
 }

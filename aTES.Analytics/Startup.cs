@@ -1,18 +1,17 @@
+using aTES.Analytics.Data;
+using aTES.Analytics.Services;
 using aTES.Blazor;
 using aTES.Common;
 using aTES.Common.Kafka;
 using aTES.Events.SchemaRegistry;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace aTES.Analytics
 {
@@ -29,22 +28,32 @@ namespace aTES.Analytics
         {
             services.AddPopugAuthentification(Configuration);
 
-            var connectionString = Configuration.GetConnectionString("TaskStoreConnection");
+            var connectionString = Configuration.GetConnectionString("AnalyticsStoreConnection");
+            services.AddDbContext<AnalyticsDbContext>(config => config.UseSqlServer(connectionString));
 
+            services.AddScoped<AnalyticsService>();
 
             services.AddPopugEventSchemas(Configuration);
+            services.AddLogging(c =>
+            {
+                c.ClearProviders();
+                c.AddConsole();
+            });
+
+            var logger = services.BuildServiceProvider().GetService<ILogger<Startup>>();
 
             var kafkaBrokers = Configuration.GetSection("Kafka:Brokers").Get<string[]>();
-            services.AddSingleton<IProducer>(s => new CommonProducer(kafkaBrokers));
-            services.AddSingleton<IConsumerFactory>(s => new ConsumerFactory(kafkaBrokers));
+            services.AddSingleton<IProducer>(s => new CommonProducer(logger, kafkaBrokers, FailoverPolicy.WithRetry(3)));
+            services.AddSingleton<IConsumerFactory>(s => new ConsumerFactory(kafkaBrokers, logger));
 
             services.AddPopugBlazor();
 
             services.AddRazorPages();
             services.AddServerSideBlazor();
+
+            services.AddHostedService<BillingHistoryUpdater>();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseCookiePolicy(new CookiePolicyOptions { MinimumSameSitePolicy = SameSiteMode.Lax });

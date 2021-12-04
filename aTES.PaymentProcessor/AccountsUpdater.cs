@@ -1,6 +1,6 @@
-﻿using aTES.Accounting.Data;
-using aTES.Common;
+﻿using aTES.Common;
 using aTES.Common.Kafka;
+using aTES.PaymentProcessor.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,7 +8,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace aTES.Accounting.Services
+namespace aTES.PaymentProcessor
 {
     /// <summary>
     /// Service to listen for Account CUD events
@@ -24,16 +24,18 @@ namespace aTES.Accounting.Services
         {
             _scopeFactory = scopeFactory;
             _accountConsumer = consumerFactory
-                .DefineConsumer<AccountData>("aTES.Accounting.AccountUpdater", "Accounts-stream")
+                .DefineConsumer<AccountData>("aTES.PaymentProcessor.AccountUpdater", "Accounts-stream")
                 .SetFailoverPolicy(FailoverPolicy.ToDlq)
                 .SetProcessor(ProcessAccountMessage)
                 .Build();
         }
 
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) => _accountConsumer.ProcessAsync(stoppingToken);
+
         private async Task ProcessAccountMessage(Event<AccountData> accMsg)
         {
             var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
             switch (accMsg.Name, accMsg.Version)
             {
                 case ("Accounts.Created", 1):
@@ -41,19 +43,13 @@ namespace aTES.Accounting.Services
                     await CreateOrUpdateAccount(accMsg.Data, db);
                     break;
                 case ("Accounts.Deleted", 1):
-                    await DeleteAccount(accMsg.Data, db);
-                    break;
+                    return;
                 default:
                     throw new Exception($"Unsupported message {accMsg.Name}{accMsg.Version}");
             };
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            return _accountConsumer.ProcessAsync(stoppingToken);
-        }
-
-        private async Task CreateOrUpdateAccount(AccountData accEvent, AccountingDbContext db)
+        private async Task CreateOrUpdateAccount(AccountData accEvent, PaymentDbContext db)
         {
             var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
             if (account == null)
@@ -61,37 +57,14 @@ namespace aTES.Accounting.Services
                 account = new Account()
                 {
                     PublicKey = accEvent.PublicKey,
-                    IsDeleted = false
                 };
                 await db.Accounts.AddAsync(account);
             }
 
-            account.Name = accEvent.Name;
             account.Email = accEvent.Email;
-            account.Role = accEvent.Role;
 
             await db.SaveChangesAsync();
         }
-
-        private async Task DeleteAccount(AccountData accEvent, AccountingDbContext db)
-        {
-            var account = await db.Accounts.FirstOrDefaultAsync(a => a.PublicKey == accEvent.PublicKey);
-            if (account == null)
-            {
-                account = new Account()
-                {
-                    PublicKey = accEvent.PublicKey,
-                };
-                await db.Accounts.AddAsync(account);
-            }
-
-            account.IsDeleted = true;
-
-            await db.SaveChangesAsync();
-        }
-
-
-        //need some class to deserialize to
 
         private class AccountData
         {

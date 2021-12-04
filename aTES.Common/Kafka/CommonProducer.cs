@@ -1,4 +1,6 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
+using Polly;
 using System;
 using System.Net;
 using System.Text.Json;
@@ -14,9 +16,14 @@ namespace aTES.Common.Kafka
     public class CommonProducer : IProducer, IDisposable
     {
         private IProducer<Null, string> _producer;
+        private readonly ILogger _logger;
+        private FailoverPolicy _failPolicy;
 
-        public CommonProducer(string[] servers)
+        public CommonProducer(ILogger logger, string[] servers, FailoverPolicy failPolicy = null)
         {
+            _failPolicy = failPolicy ?? FailoverPolicy.Default;
+            _logger = logger;
+
             var config = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", servers),
@@ -31,7 +38,14 @@ namespace aTES.Common.Kafka
         {
             var msg = JsonSerializer.Serialize(message);
 
-            return _producer.ProduceAsync(topic, new Message<Null, string>() { Value = msg });
+            return Policy
+                .Handle<ProduceException<Null, string>>()
+                .WaitAndRetryAsync(_failPolicy.RetryCount, 
+                    retryAttempt => _failPolicy.RetryDelayCalc(retryAttempt),
+                    (exception, timeSpan, context) => {
+                        _logger.LogWarning($"Cannot send message, retrying");
+                    })
+                .ExecuteAsync(() => _producer.ProduceAsync(topic, new Message<Null, string>() { Value = msg }));
         }
 
         public void Dispose()

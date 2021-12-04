@@ -43,6 +43,7 @@ namespace aTES.Tasks.Services
                 Name = model.Name,
                 Description = model.Description,
                 PublicKey = Guid.NewGuid().ToString(),
+                JiraId = model.JiraId,
                 Status = TaskState.Open,
             };
 
@@ -168,12 +169,14 @@ namespace aTES.Tasks.Services
                     Name = task.Name,
                     PublicKey = task.PublicKey,
                     Description = task.Description,
+                    Jira_Id = task.JiraId,
                 },
                 "Tasks.Updated" => new
                 {
                     Name = task.Name,
                     PublicKey = task.PublicKey,
                     Description = task.Description,
+                    Jira_Id = task.JiraId,
                 },
                 _ => throw new ArgumentException($"Unsupported event type {eventType}")
             };

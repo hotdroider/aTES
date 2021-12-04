@@ -10,6 +10,8 @@
 
                 <NavLink href="billing" class="nav-item nav-link">Billing</NavLink>
 
+                 <NavLink href="management" class="nav-item nav-link">Management</NavLink>
+
                 <AuthorizeView Roles="admin,manager">
                     <Authorized>
                         <NavLink href="management" class="nav-item nav-link">Management</NavLink>
@@ -36,13 +38,3 @@
         </div>
     </div>
 </div>
-
-@inject AuthenticationStateProvider AuthState
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        var aState = await AuthState.GetAuthenticationStateAsync();
-        base.OnInitializedAsync();
-    }
-
-}

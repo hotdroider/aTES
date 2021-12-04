@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace aTES.Accounting.Data
 {
@@ -20,9 +21,10 @@ namespace aTES.Accounting.Data
 
         public TransactionType Type { get; set; }
 
-        /// <summary>
-        /// Tran amount, always positive number, use type to determine its value for various sides
-        /// </summary>
-        public decimal Amount { get; set; }
+        public DateTime Date { get; set; }
+
+        public decimal Debit { get; set; }
+
+        public decimal Credit { get; set; }
     }
 }

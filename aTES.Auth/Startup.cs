@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace aTES.Auth
 {
@@ -83,10 +84,18 @@ namespace aTES.Auth
 
             services.AddPopugEventSchemas(Configuration);
 
+            services.AddLogging(c =>
+            {
+                c.ClearProviders();
+                c.AddConsole();
+            });
+
+            var logger = services.BuildServiceProvider().GetService<ILogger<Startup>>();
+
             services.AddSingleton<IProducer>(s =>
             {
                 var brokers = Configuration.GetSection("Kafka:Brokers").Get<string[]>();
-                return new CommonProducer(brokers);
+                return new CommonProducer(logger, brokers, FailoverPolicy.WithRetry(3));
             });
 
             services.AddScoped<IAccountService, IdentityAccountService>();
